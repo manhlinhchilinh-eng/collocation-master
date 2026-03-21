@@ -3,7 +3,7 @@ services:
     name: collocation-master
     runtime: node
     plan: free
-    buildCommand: npm install && cd client && npm install && npx vite build --outDir ../server/public && cd ..
+    buildCommand: npm install
     startCommand: node server/server.js
     envVars:
       - key: NODE_ENV
