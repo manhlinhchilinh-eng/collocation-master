@@ -2,8 +2,9 @@ services:
   - type: web
     name: collocation-master
     runtime: node
-    buildCommand: npm install && npm run build
-    startCommand: npm start
+    plan: free
+    buildCommand: npm install && cd client && npm install && npx vite build --outDir ../server/public && cd ..
+    startCommand: node server/server.js
     envVars:
       - key: NODE_ENV
         value: production
