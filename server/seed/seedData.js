@@ -18,7 +18,7 @@ const lessons = [
   { title: 'Formal & Academic Register', titleVi: 'Ngôn ngữ trang trọng', desc: 'Formal register collocations', descVi: 'Cụm từ trang trọng', level: 'C1', order: 11, src: 'Cambridge Advanced Units 3-4', locked: 1 },
   { title: 'Idiomatic Collocations', titleVi: 'Cụm từ thành ngữ', desc: 'Semi-fixed idiomatic expressions', descVi: 'Thành ngữ cố định', level: 'C1', order: 12, src: 'Cambridge Advanced', locked: 1 },
   { title: 'Advanced Exam Collocations', titleVi: 'Collocation thi nâng cao', desc: 'From CAE/CPE past papers', descVi: 'Từ đề thi CAE/CPE', level: 'C1+', order: 13, src: 'CAE/CPE', locked: 1 },
-  { title: 'CNN-Style Challenge', titleVi: 'Bộ thử thách CNN', desc: 'CNN exam difficulty', descVi: 'Theo chuẩn đề CNN', level: 'C1+', order: 14, src: 'CNN patterns', locked: 1 },
+  { title: 'Exam-Level Challenge', titleVi: 'Thử thách cấp đề thi', desc: 'Advanced exam-level collocations', descVi: 'Collocations mức đề thi nâng cao', level: 'C1+', order: 14, src: 'CAE/CPE/THPT patterns', locked: 1 },
   { title: 'Health & Wellbeing', titleVi: 'Sức khỏe & Thể chất', desc: 'Medical and health collocations', descVi: 'Cụm từ y tế & sức khỏe', level: 'B2', order: 15, src: 'Cambridge Advanced', locked: 1 },
   { title: 'Technology & Innovation', titleVi: 'Công nghệ & Đổi mới', desc: 'Tech and digital collocations', descVi: 'Cụm từ công nghệ số', level: 'B2', order: 16, src: 'Cambridge Advanced', locked: 1 },
   { title: 'Travel & Culture', titleVi: 'Du lịch & Văn hóa', desc: 'Travel and cultural collocations', descVi: 'Cụm từ du lịch & văn hóa', level: 'B2', order: 17, src: 'Cambridge Intermediate', locked: 1 },

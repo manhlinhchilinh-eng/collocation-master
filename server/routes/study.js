@@ -108,36 +108,54 @@ router.get('/quiz/:lessonId', authMiddleware, (req, res) => {
   } catch (err) { console.error(err); res.status(500).json({ error: 'Lỗi server' }); }
 });
 
-// --- Nuance Practice ---
-// Generates questions where students distinguish between similar collocations
+// --- Improved Nuance Practice ---
+// Picks distractors that share the SAME verb/adjective/noun to create genuinely confusing choices
 router.get('/nuance/:lessonId', authMiddleware, (req, res) => {
   try {
     const lessonId = parseInt(req.params.lessonId), count = parseInt(req.query.count) || 8;
-    const collocations = queryAll('SELECT * FROM collocations WHERE lessonId = ? ORDER BY RANDOM() LIMIT ?', [lessonId, count * 2]);
-    const allCols = queryAll('SELECT * FROM collocations');
+    const collocations = queryAll('SELECT * FROM collocations WHERE lessonId = ? ORDER BY RANDOM() LIMIT ?', [lessonId, count * 3]);
+    const allCols = queryAll('SELECT * FROM collocations WHERE id NOT IN (SELECT id FROM collocations WHERE lessonId = ?)  UNION ALL SELECT * FROM collocations WHERE lessonId = ?', [lessonId, lessonId]);
     const questions = [];
 
     for (const col of collocations) {
       if (questions.length >= count) break;
-      const words = col.collocation.split(' ');
-      // Find similar collocations (share at least one word)
-      const distractors = allCols.filter(c => {
-        if (c.id === col.id) return false;
-        const cWords = c.collocation.split(' ');
-        return words.some(w => w.length > 2 && cWords.includes(w)) || c.type === col.type;
-      }).sort(() => Math.random() - 0.5).slice(0, 2);
+      const words = col.collocation.toLowerCase().split(' ').filter(w => w.length > 2);
 
-      if (distractors.length < 1) continue;
+      // Priority 1: share the SAME main word (verb/adj/noun) — hardest
+      const sameWord = allCols.filter(c => {
+        if (c.id === col.id) return false;
+        const cWords = c.collocation.toLowerCase().split(' ').filter(w => w.length > 2);
+        return words.some(w => cWords.includes(w));
+      });
+
+      // Priority 2: same collocation type (verb+noun, adj+noun etc.)
+      const sameType = allCols.filter(c => c.id !== col.id && c.type === col.type && !sameWord.find(s => s.id === c.id));
+
+      // Build distractors: prefer sameWord, then sameType
+      const pool = [...sameWord.sort(() => Math.random() - 0.5), ...sameType.sort(() => Math.random() - 0.5)];
+      const distractors = pool.slice(0, 3);
+      if (distractors.length < 2) continue;
+
+      // Build the context: use the example but blank out the collocation
+      const escaped = col.collocation.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const context = col.example.replace(new RegExp(escaped, 'gi'), '________');
+
+      // If context didn't change (collocation not found in example verbatim), create context manually
+      const finalContext = context === col.example
+        ? `________ — ${col.example}`
+        : context;
 
       questions.push({
         id: col.id,
-        context: col.example.replace(new RegExp(col.collocation.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi'), '________'),
+        context: finalContext,
         meaning: col.meaningVi,
+        example: col.example,
         options: [
-          { text: col.collocation, correct: true, explanation: `✅ "${col.collocation}" — ${col.meaningVi}. Ví dụ: ${col.example}` },
-          ...distractors.map(d => ({
+          { text: col.collocation, correct: true,
+            explanation: `✅ Đúng! "${col.collocation}" (${col.meaningVi}). ${col.example}` },
+          ...distractors.slice(0, 2).map(d => ({
             text: d.collocation, correct: false,
-            explanation: `❌ "${d.collocation}" nghĩa là "${d.meaningVi}" — không phù hợp ngữ cảnh này. Đáp án đúng: "${col.collocation}"`
+            explanation: `❌ "${d.collocation}" có nghĩa là "${d.meaningVi}" — khác sắc thái. Đáp án đúng: "${col.collocation}" (${col.meaningVi})`
           }))
         ].sort(() => Math.random() - 0.5),
         correctAnswer: col.collocation,
@@ -145,6 +163,46 @@ router.get('/nuance/:lessonId', authMiddleware, (req, res) => {
       });
     }
     res.json({ questions });
+  } catch (err) { console.error(err); res.status(500).json({ error: 'Lỗi server' }); }
+});
+
+// --- Typing Exercise ---
+// Student sees meaning + example, must type the collocation
+router.get('/typing/:lessonId', authMiddleware, (req, res) => {
+  try {
+    const lessonId = parseInt(req.params.lessonId), count = parseInt(req.query.count) || 10;
+    const collocations = queryAll('SELECT * FROM collocations WHERE lessonId = ? ORDER BY RANDOM() LIMIT ?', [lessonId, count]);
+    const questions = collocations.map(col => {
+      // Create hint: first letter of each word
+      const hint = col.collocation.split(' ').map(w => w[0] + '_'.repeat(w.length - 1)).join(' ');
+      return {
+        id: col.id,
+        meaningVi: col.meaningVi,
+        meaningEn: col.example,
+        hint: hint,
+        type: col.type,
+        answer: col.collocation.toLowerCase(),
+        wordCount: col.collocation.split(' ').length,
+      };
+    });
+    res.json({ questions });
+  } catch (err) { console.error(err); res.status(500).json({ error: 'Lỗi server' }); }
+});
+
+// --- Admin: Per-student lesson unlock/lock ---
+router.post('/student-lesson', authMiddleware, (req, res) => {
+  try {
+    if (req.user.role !== 'admin') return res.status(403).json({ error: 'Chỉ admin' });
+    const { studentId, lessonIds, unlock } = req.body;
+    if (!studentId || !lessonIds || !Array.isArray(lessonIds)) return res.status(400).json({ error: 'Thiếu thông tin' });
+    for (const lid of lessonIds) {
+      if (unlock) {
+        runSql("INSERT OR REPLACE INTO lesson_access (userId,lessonId,isUnlocked,unlockedAt,unlockedBy) VALUES (?,?,1,datetime('now'),?)", [studentId, lid, req.user.id]);
+      } else {
+        runSql("UPDATE lesson_access SET isUnlocked=0 WHERE userId=? AND lessonId=?", [studentId, lid]);
+      }
+    }
+    res.json({ message: unlock ? `Đã mở ${lessonIds.length} bài cho học sinh` : `Đã khóa ${lessonIds.length} bài` });
   } catch (err) { console.error(err); res.status(500).json({ error: 'Lỗi server' }); }
 });
 

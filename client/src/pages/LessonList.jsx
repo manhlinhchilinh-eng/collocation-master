@@ -46,6 +46,7 @@ export default function LessonList() {
                   <Link to={`/study/${lesson.id}`} className="btn btn-primary btn-sm">📖 Học</Link>
                   <Link to={`/quiz/${lesson.id}`} className="btn btn-secondary btn-sm">🧪 Quiz</Link>
                   <Link to={`/nuance/${lesson.id}`} className="btn btn-secondary btn-sm" style={{ background: 'var(--accent-bg)', color: 'var(--accent)' }}>🎯 Sắc thái</Link>
+                  <Link to={`/typing/${lesson.id}`} className="btn btn-secondary btn-sm" style={{ background: 'rgba(255,165,0,0.15)', color: '#ffa500' }}>✍️ Viết</Link>
                 </div>
               )}
             </div>

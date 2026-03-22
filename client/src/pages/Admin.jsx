@@ -156,20 +156,55 @@ export default function Admin() {
               <h2>{selectedStudent.student.displayName}</h2>
               <p style={{color:'var(--text-muted)',marginBottom:'1.5rem'}}>@{selectedStudent.student.username} | Streak: {selectedStudent.student.streak || 0}🔥</p>
               
-              <h3 style={{marginBottom:'0.75rem'}}>Tiến trình theo bài</h3>
+              <div style={{display:'flex',gap:'0.75rem',marginBottom:'1.5rem',flexWrap:'wrap'}}>
+                <button className="btn btn-sm btn-success" onClick={async () => {
+                  const lockedIds = selectedStudent.lessonProgress.filter(lp => !lp.isUnlocked).map(lp => lp.id);
+                  if (lockedIds.length === 0) return;
+                  await api.post('/study/student-lesson', { studentId: selectedStudent.student.id, lessonIds: lockedIds, unlock: true });
+                  viewStudent(selectedStudent.student.id);
+                }}>🔓 Mở tất cả bài</button>
+                <button className="btn btn-sm btn-danger" onClick={async () => {
+                  const openIds = selectedStudent.lessonProgress.filter(lp => lp.isUnlocked).map(lp => lp.id);
+                  if (openIds.length === 0) return;
+                  await api.post('/study/student-lesson', { studentId: selectedStudent.student.id, lessonIds: openIds, unlock: false });
+                  viewStudent(selectedStudent.student.id);
+                }}>🔒 Khóa tất cả</button>
+              </div>
+
+              <h3 style={{marginBottom:'0.75rem'}}>Tiến trình & Khóa/Mở bài</h3>
               <div className="table-container" style={{marginBottom:'1.5rem'}}>
                 <table>
-                  <thead><tr><th>Bài học</th><th>Level</th><th>Đã học</th><th>Thành thạo</th><th>Trạng thái</th></tr></thead>
+                  <thead><tr><th>Bài học</th><th>Level</th><th>Đã học</th><th>Thành thạo</th><th>Trạng thái</th><th>Hành động</th></tr></thead>
                   <tbody>
-                    {selectedStudent.lessonProgress.map(lp => (
-                      <tr key={lp.id}>
-                        <td>{lp.titleVi}</td>
-                        <td><span className={`level-badge level-${lp.level}`}>{lp.level}</span></td>
-                        <td>{lp.studiedCards}/{lp.totalCards}</td>
-                        <td>{lp.masteredCards}/{lp.totalCards}</td>
-                        <td>{lp.isUnlocked ? <span className="badge badge-success">Mở</span> : <span className="badge badge-danger">Khóa</span>}</td>
-                      </tr>
-                    ))}
+                    {selectedStudent.lessonProgress.map(lp => {
+                      const pct = lp.totalCards > 0 ? Math.round((lp.masteredCards / lp.totalCards) * 100) : 0;
+                      return (
+                        <tr key={lp.id}>
+                          <td>{lp.titleVi}<br/><span style={{color:'var(--text-muted)',fontSize:'0.75rem'}}>{lp.title}</span></td>
+                          <td><span className={`level-badge level-${lp.level}`}>{lp.level}</span></td>
+                          <td>{lp.studiedCards}/{lp.totalCards}</td>
+                          <td>
+                            <span style={{color: pct >= 80 ? 'var(--success)' : pct >= 50 ? 'var(--warning)' : 'var(--text-muted)'}}>
+                              {lp.masteredCards}/{lp.totalCards} ({pct}%)
+                            </span>
+                          </td>
+                          <td>{lp.isUnlocked ? <span className="badge badge-success">Mở</span> : <span className="badge badge-danger">Khóa</span>}</td>
+                          <td>
+                            <button
+                              className={`btn btn-sm ${lp.isUnlocked ? 'btn-danger' : 'btn-success'}`}
+                              onClick={async () => {
+                                await api.post('/study/student-lesson', {
+                                  studentId: selectedStudent.student.id,
+                                  lessonIds: [lp.id],
+                                  unlock: !lp.isUnlocked
+                                });
+                                viewStudent(selectedStudent.student.id);
+                              }}
+                            >{lp.isUnlocked ? '🔒 Khóa' : '🔓 Mở'}</button>
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
