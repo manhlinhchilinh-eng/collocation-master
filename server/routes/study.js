@@ -108,4 +108,44 @@ router.get('/quiz/:lessonId', authMiddleware, (req, res) => {
   } catch (err) { console.error(err); res.status(500).json({ error: 'Lỗi server' }); }
 });
 
+// --- Nuance Practice ---
+// Generates questions where students distinguish between similar collocations
+router.get('/nuance/:lessonId', authMiddleware, (req, res) => {
+  try {
+    const lessonId = parseInt(req.params.lessonId), count = parseInt(req.query.count) || 8;
+    const collocations = queryAll('SELECT * FROM collocations WHERE lessonId = ? ORDER BY RANDOM() LIMIT ?', [lessonId, count * 2]);
+    const allCols = queryAll('SELECT * FROM collocations');
+    const questions = [];
+
+    for (const col of collocations) {
+      if (questions.length >= count) break;
+      const words = col.collocation.split(' ');
+      // Find similar collocations (share at least one word)
+      const distractors = allCols.filter(c => {
+        if (c.id === col.id) return false;
+        const cWords = c.collocation.split(' ');
+        return words.some(w => w.length > 2 && cWords.includes(w)) || c.type === col.type;
+      }).sort(() => Math.random() - 0.5).slice(0, 2);
+
+      if (distractors.length < 1) continue;
+
+      questions.push({
+        id: col.id,
+        context: col.example.replace(new RegExp(col.collocation.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi'), '________'),
+        meaning: col.meaningVi,
+        options: [
+          { text: col.collocation, correct: true, explanation: `✅ "${col.collocation}" — ${col.meaningVi}. Ví dụ: ${col.example}` },
+          ...distractors.map(d => ({
+            text: d.collocation, correct: false,
+            explanation: `❌ "${d.collocation}" nghĩa là "${d.meaningVi}" — không phù hợp ngữ cảnh này. Đáp án đúng: "${col.collocation}"`
+          }))
+        ].sort(() => Math.random() - 0.5),
+        correctAnswer: col.collocation,
+        type: col.type,
+      });
+    }
+    res.json({ questions });
+  } catch (err) { console.error(err); res.status(500).json({ error: 'Lỗi server' }); }
+});
+
 module.exports = router;

@@ -7,6 +7,7 @@ import Register from './pages/Register';
 import LessonList from './pages/LessonList';
 import Study from './pages/Study';
 import Quiz from './pages/Quiz';
+import NuancePractice from './pages/NuancePractice';
 import Progress from './pages/Progress';
 import Admin from './pages/Admin';
 
@@ -36,6 +37,7 @@ export default function App() {
           <Route path="/lessons" element={<ProtectedRoute><LessonList /></ProtectedRoute>} />
           <Route path="/study/:lessonId" element={<ProtectedRoute><Study /></ProtectedRoute>} />
           <Route path="/quiz/:lessonId" element={<ProtectedRoute><Quiz /></ProtectedRoute>} />
+          <Route path="/nuance/:lessonId" element={<ProtectedRoute><NuancePractice /></ProtectedRoute>} />
           <Route path="/progress" element={<ProtectedRoute><Progress /></ProtectedRoute>} />
           <Route path="/admin" element={<AdminRoute><Admin /></AdminRoute>} />
         </Routes>
